@@ -30,12 +30,12 @@ async def test_search_issues(http_client):
         ],
         "total": 2,
     }
-    
+
     with patch.object(http_client, "get", return_value=mock_response):
         issues = []
         async for issue in http_client.search_issues("TEST"):
             issues.append(issue)
-        
+
         assert len(issues) == 2
         assert issues[0]["key"] == "TEST-1"
 
@@ -47,7 +47,7 @@ async def test_get_issue(http_client):
         "key": "TEST-123",
         "fields": {"summary": "Test issue"},
     }
-    
+
     with patch.object(http_client, "get", return_value=mock_response):
         issue = await http_client.get_issue("TEST-123")
         assert issue["key"] == "TEST-123"

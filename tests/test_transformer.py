@@ -65,14 +65,14 @@ def sample_issues():
 async def test_transform_issues(transformer, sample_issues, temp_output_dir):
     """Test issue transformation to JSONL."""
     await transformer.transform_issues(sample_issues)
-    
+
     output_file = temp_output_dir / "training_data.jsonl"
     assert output_file.exists()
-    
+
     # Read and verify JSONL content
     lines = output_file.read_text().strip().split("\n")
     assert len(lines) == 2
-    
+
     # Parse first record
     record = json.loads(lines[0])
     assert record["issue_key"] == "TEST-123"
@@ -85,10 +85,10 @@ async def test_transform_issues(transformer, sample_issues, temp_output_dir):
 async def test_save_raw_data(transformer, sample_issues, temp_output_dir):
     """Test saving raw issue data."""
     await transformer.save_raw_data(sample_issues)
-    
+
     output_file = temp_output_dir / "raw_issues.json"
     assert output_file.exists()
-    
+
     # Verify content
     data = json.loads(output_file.read_text())
     assert len(data) == 2
@@ -98,7 +98,7 @@ async def test_save_raw_data(transformer, sample_issues, temp_output_dir):
 def test_generate_stats(transformer, sample_issues):
     """Test statistics generation."""
     stats = transformer.generate_stats(sample_issues)
-    
+
     assert stats["total_issues"] == 2
     assert stats["projects"]["TEST"] == 2
     assert stats["statuses"]["Open"] == 1

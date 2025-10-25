@@ -2,10 +2,10 @@
 
 import json
 from pathlib import Path
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
 import httpx
+import pytest
 
 from jira_scraper.scraper import JiraScraper
 
@@ -40,13 +40,13 @@ async def test_state_management(scraper):
     """Test state save/load functionality."""
     scraper.processed_issues.add("TEST-123")
     scraper.save_state()
-    
+
     # Create new scraper instance
     new_scraper = JiraScraper(
         projects=["TEST"],
         output_dir=scraper.output_dir,
     )
-    
+
     assert "TEST-123" in new_scraper.processed_issues
 
 
@@ -80,10 +80,11 @@ def test_issue_from_api_response():
             },
         },
     }
-    
+
     from jira_scraper.models import JiraIssue
+
     issue = JiraIssue.from_api_response(api_response)
-    
+
     assert issue.key == "TEST-123"
     assert issue.summary == "Test issue"
     assert issue.status == "Open"

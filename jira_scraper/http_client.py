@@ -1,13 +1,14 @@
 import asyncio
-from typing import Any, Dict, Optional, AsyncGenerator
+from typing import Any, AsyncGenerator, Dict, Optional
 
 import httpx
 from tenacity import (
     retry,
+    retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type,
 )
+
 
 class JiraHttpClient:
     """HTTP client for Jira API v2 with built-in error handling and rate limiting."""
@@ -32,22 +33,18 @@ class JiraHttpClient:
         retry=retry_if_exception_type((httpx.HTTPError, httpx.TimeoutException)),
     )
     async def request(
-        self, 
-        method: str, 
-        endpoint: str, 
-        params: Optional[Dict] = None,
-        **kwargs
+        self, method: str, endpoint: str, params: Optional[Dict] = None, **kwargs
     ) -> Dict[str, Any]:
         """Make HTTP request with retry logic and rate limiting."""
         await asyncio.sleep(self.rate_limit_delay)
-        
+
         url = f"{self.base_url}{endpoint}"
         response = await self.client.request(method, url, params=params, **kwargs)
-        
+
         if response.status_code == 429:
             await asyncio.sleep(10)
             raise httpx.HTTPError("Rate limited")
-        
+
         response.raise_for_status()
         return response.json()
 
@@ -74,16 +71,18 @@ class JiraHttpClient:
 
             data = await self.get("/rest/api/2/search", params)
             issues = data.get("issues", [])
-            
+
             for issue in issues:
                 yield issue
-            
+
             if len(issues) < max_results:
                 break
-            
+
             start_at += max_results
 
-    async def get_issue(self, issue_key: str, expand: str = "comments") -> Dict[str, Any]:
+    async def get_issue(
+        self, issue_key: str, expand: str = "comments"
+    ) -> Dict[str, Any]:
         """Get single issue details using API v2."""
         params = {
             "expand": expand,

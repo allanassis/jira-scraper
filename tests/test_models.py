@@ -57,9 +57,9 @@ def test_llm_training_record():
             )
         ],
     )
-    
+
     record = LLMTrainingRecord.from_jira_issue(issue)
-    
+
     assert record.issue_key == "TEST-123"
     assert record.project == "TEST"
     assert "Test description" in record.text_content
