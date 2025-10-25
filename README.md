@@ -388,6 +388,16 @@ Each line in `training_data.jsonl` contains:
 
 ## Future Improvements
 
+### Improve Jira Integration
+
+- Migrate from V2 API to V3, I only realized that the V2 was deprecated when the project timeline was close to the end.
+
+The [Jira API V2](https://developer.atlassian.com/cloud/jira/platform/rest/v2/api-group-issue-search/#api-rest-api-2-search-get) is deprecated and we should move to [Jira API V3](https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-search/#api-rest-api-3-search-jql-get)
+
+- Add autentication to the API call
+
+#### API V2 is deprecated
+
 ### Scalability Enhancements
 
 #### **Distributed Scraping**
