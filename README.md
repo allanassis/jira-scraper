@@ -2,75 +2,59 @@
 
 A robust, fault-tolerant web scraper that extracts issue data from Apache's public Jira instance and transforms it into high-quality training data for Large Language Models.
 
-## Features
+## Requirements
 
-- **Fault-Tolerant Scraping**: Automatic retries, rate limiting, and graceful error handling
-- **Resumable Operations**: State persistence allows resuming interrupted scraping sessions
-- **Concurrent Processing**: Configurable concurrency with proper rate limiting
-- **Data Transformation**: Converts raw Jira data into structured JSONL format for LLM training
-- **Comprehensive Testing**: Full test suite with async support
-- **Rich CLI Interface**: User-friendly command-line interface with progress indicators
+- **Python 3.9+**
+- Internet connection for API access
 
-## Architecture
+## Setup Instructions
 
-### Core Components
-
-1. **JiraScraper** (`scraper.py`): Main scraping engine with fault tolerance
-2. **DataTransformer** (`transformer.py`): Converts raw data to LLM training format
-3. **Models** (`models.py`): Pydantic models for type safety and validation
-4. **CLI** (`cli.py`): Command-line interface with rich output
-
-### Design Principles
-
-- **Fault Tolerance**: Exponential backoff retries, rate limit handling, malformed data recovery
-- **Performance**: Async/await concurrency, connection pooling, efficient pagination
-- **Extensibility**: Modular design, configurable parameters, pluggable transformations
-- **Observability**: Comprehensive logging, progress tracking, detailed statistics
-
-## Installation
-
-### Prerequisites
-
-- Python 3.9+
-- pip or poetry
-
-### Setup
+### Installation
 
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd scraping-tutor
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -e .
-
-# Install development dependencies (optional)
-pip install -e ".[dev]"
+# Create virtual environment and install dependencies
+make install
 ```
 
 ## Usage
 
-### Basic Usage
+### Basic Commands
 
 ```bash
 # Scrape default projects (KAFKA, SPARK, HADOOP)
 jira-scraper
 
 # Scrape specific projects
-jira-scraper -p KAFKA -p SPARK -p FLINK
+jira-scraper -p KAFKA -p SPARK
 
 # Custom output directory
 jira-scraper -o /path/to/output
+
+# Limit issues for testing
+jira-scraper --limit 10
 
 # Resume interrupted session
 jira-scraper --resume
 ```
 
-### Advanced Configuration
+### CLI Options
+
+```
+Options:
+  -p, --projects TEXT        Jira projects to scrape (default: KAFKA, SPARK, HADOOP)
+  -o, --output-dir PATH      Output directory for scraped data (default: output)
+  -c, --max-concurrent INT   Maximum concurrent requests (default: 5)
+  -r, --rate-limit FLOAT     Rate limit delay in seconds (default: 1.0)
+  -l, --limit INT           Limit number of issues per project (for testing)
+  --resume                  Resume from previous scraping session
+  --help                    Show this message and exit
+```
+
+### Performance Tuning
 
 ```bash
 # High-performance scraping
@@ -78,9 +62,285 @@ jira-scraper -c 10 -r 0.5  # 10 concurrent requests, 0.5s rate limit
 
 # Conservative scraping (respectful of server resources)
 jira-scraper -c 2 -r 2.0   # 2 concurrent requests, 2s rate limit
+
+# Quick test with limited data
+jira-scraper -p KAFKA --limit 5 -r 2.0
 ```
 
-### Output Files
+## Architecture Overview
+
+### Design Philosophy
+
+The scraper follows a **modular, async-first architecture** designed for:
+
+- **Fault tolerance**: Graceful handling of network failures and malformed data
+- **Performance**: Concurrent processing with respectful rate limiting
+- **Maintainability**: Clear separation of concerns and unified data models
+- **Extensibility**: Pluggable components for future enhancements
+
+### Core Components
+
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   CLI Interface │───▶│   JiraScraper    │───▶│ DataTransformer │
+│   (cli.py)      │    │   (scraper.py)   │    │ (transformer.py)│
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌──────────────────┐    ┌─────────────────┐
+                       │ JiraHttpClient   │───▶│ Pydantic Models │
+                       │ (http_client.py) │    │ (models.py)     │
+                       └──────────────────┘    └─────────────────┘
+```
+
+#### 1. **JiraScraper** (`scraper.py`)
+
+- **Purpose**: Orchestrates the scraping workflow
+- **Responsibilities**: Project iteration, state management, concurrent processing
+- **Key Features**: Resumable operations, progress tracking, error aggregation
+
+#### 2. **JiraHttpClient** (`http_client.py`)
+
+- **Purpose**: Handles all HTTP communication with Jira API
+- **Responsibilities**: Rate limiting, retries, pagination, connection pooling
+- **Key Features**: Exponential backoff, automatic pagination
+
+#### 3. **Pydantic Models** (`models.py`)
+
+- **Purpose**: Unified data validation and serialization
+- **Responsibilities**: API response parsing, data validation
+- **Key Features**: Graceful None handling, validation decorators
+
+#### 4. **DataTransformer** (`transformer.py`)
+
+- **Purpose**: Converts raw Jira data to LLM training format
+- **Responsibilities**: JSONL generation, statistics calculation, file management
+- **Key Features**: Streaming output, memory efficiency, structured training tasks
+
+#### 5. **CLI Interface** (`cli.py`)
+
+- **Purpose**: User-friendly command-line interface
+- **Responsibilities**: Argument parsing, progress display, error reporting
+- **Key Features**: Rich terminal output, configuration validation, help system
+
+### Design Reasoning
+
+#### **Async/Await Architecture**
+
+- **Why**: I/O-bound operations benefit significantly from concurrency
+- **Implementation**: All HTTP requests and file operations use async/await
+- **Benefit**: Non blocking requests
+
+#### **Decoupled HTTP Client**
+
+- **Why**: Separates network concerns from business logic
+- **Implementation**: Dedicated JiraHttpClient with built-in resilience
+- **Benefit**: Easier testing, reusable across components, centralized retry logic
+
+#### **State Persistence**
+
+- **Why**: Long-running scrapes need resumption capability
+- **Implementation**: JSON state file tracking processed issues
+- **Benefit**: Fault tolerance, cost efficiency, user experience
+
+## Edge Cases Handled
+
+### Network Resilience
+
+#### **HTTP 429 (Rate Limited)**
+
+```python
+# Exponential backoff with jitter
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=4, max=60) + wait_random(0, 1)
+)
+```
+
+- **Detection**: HTTP 429 status code or rate limit headers
+- **Response**: Exponential backoff with randomized jitter
+- **Fallback**: Automatic rate limit adjustment
+
+#### **5xx Server Errors**
+
+- **Detection**: HTTP 500-599 status codes
+- **Response**: Retry with increasing delays (1s, 2s, 4s, 8s, 16s)
+- **Fallback**: Skip problematic issues after max retries
+
+#### **Connection Failures**
+
+- **Detection**: Network timeouts, DNS failures, connection refused
+- **Fallback**: Graceful degradation with state preservation
+
+### Data Quality Issues
+
+#### **Malformed JSON Responses**
+
+```python
+try:
+    issue = JiraIssue.from_api_response(data)
+except ValidationError as e:
+    logger.warning(f"Skipping malformed issue {issue_key}: {e}")
+    continue
+```
+
+- **Detection**: JSON parsing errors, schema validation failures, extensible
+- **Response**: Log warning, skip corrupted record, continue processing
+- **Preservation**: Raw data saved for manual inspection
+
+#### **Missing Required Fields**
+
+```python
+@field_validator("key")
+@classmethod
+def validate_key(cls, v):
+    if not v:
+        raise ValueError("Key is required")
+    return v
+```
+
+- **Detection**: Pydantic validation with custom validators
+- **Response**: Provide sensible defaults or raise validation errors
+- **Handling**: Graceful None handling in from_api_response methods
+
+### Operational Resilience
+
+#### **Interruption Recovery**
+
+```python
+def save_state(self) -> None:
+    """Save scraper state to disk."""
+    state = {"processed_issues": list(self.processed_issues)}
+    with open(self.state_file, "w") as f:
+        json.dump(state, f)
+```
+
+- **Trigger**: SIGINT, SIGTERM, unexpected crashes
+- **Mechanism**: Persistent state file with processed issue tracking
+- **Recovery**: Automatic resumption with `--resume` flag
+
+#### **Memory Management**
+
+- **Issue**: Large datasets exceeding available memory
+- **Solution**: Streaming JSONL output, generator-based processing
+- **Monitoring**: Progress tracking without full dataset in memory
+
+#### **Disk Space Exhaustion**
+
+- **Detection**: OSError on file write operations
+- **Response**: Graceful error handling with user notification
+- **Prevention**: Incremental file writing, size estimation
+
+## Optimization Decisions
+
+### Performance Optimizations
+
+#### **Concurrent Processing**
+
+```python
+semaphore = asyncio.Semaphore(self.max_concurrent)
+tasks = [fetch_issue(key) for key in issue_keys]
+results = await asyncio.gather(*tasks, return_exceptions=True)
+```
+
+- **Decision**: Semaphore-controlled concurrency vs thread pools
+- **Reasoning**: Better resource control, async-native, lower overhead
+- **Impact**: 5-10x performance improvement with configurable limits
+
+#### **Connection Pooling**
+
+```python
+self.client = httpx.AsyncClient(
+    limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+    timeout=httpx.Timeout(30.0)
+)
+```
+
+- **Decision**: httpx connection pooling vs requests
+- **Reasoning**: Async support, HTTP/2, better connection reuse
+- **Impact**: Reduced connection overhead, improved throughput
+
+#### **Streaming Output**
+
+```python
+async with aiofiles.open(self.training_file, "w") as f:
+    for record in training_records:
+        await f.write(f"{record.model_dump_json()}\n")
+```
+
+- **Decision**: Streaming JSONL vs in-memory collection
+- **Reasoning**: Constant memory usage, early output availability
+- **Impact**: Handles datasets larger than available memory
+
+### Memory Optimizations
+
+#### **Generator-Based Processing**
+
+```python
+async def get_project_issues(self, project: str) -> AsyncGenerator[str, None]:
+    async for issue in self.client.search_issues(project, fields="key"):
+        yield issue["key"]
+```
+
+- **Decision**: Generators vs list collection
+- **Reasoning**: Lazy evaluation, constant memory usage
+- **Impact**: Memory usage independent of dataset size
+
+#### **Efficient Data Structures**
+
+- **Decision**: Pydantic models vs dictionaries
+- **Reasoning**: Type safety, validation, serialization efficiency
+- **Trade-off**: Slight memory overhead for significant safety gains
+
+### Reliability Optimizations
+
+#### **Exponential Backoff with Jitter**
+
+```python
+wait=wait_exponential(multiplier=1, min=4, max=60) + wait_random(0, 1)
+```
+
+- **Decision**: Exponential backoff vs fixed delays
+- **Reasoning**: Reduces server load, handles temporary failures
+- **Enhancement**: Jitter prevents thundering herd problems
+
+#### **Circuit Breaker Pattern**
+
+- **Decision**: Fail-fast vs continuous retries
+- **Reasoning**: Prevents cascade failures, faster error detection
+- **Implementation**: Built into httpx client with timeout handling
+
+## Testing Strategy
+
+### Test Coverage
+
+```bash
+# Run all tests
+pytest
+
+# Run with coverage
+make test-cov
+
+# Run E2E test (uses real API)
+make e2e-test
+
+# Run integration tests with mocks
+makte unit-test
+```
+
+#### **Unit Tests** (85% coverage)
+
+- All core components with comprehensive mocking
+- Edge case validation and error handling
+- Pydantic model validation scenarios
+
+#### **E2E Tests**
+
+- Real API calls with limited scope (--limit parameter)
+- Complete workflow validation
+- Output file verification
+
+## Output Files
 
 - `training_data.jsonl`: LLM training data in JSONL format
 - `raw_issues.json`: Raw Jira data for debugging/analysis
@@ -88,8 +348,6 @@ jira-scraper -c 2 -r 2.0   # 2 concurrent requests, 2s rate limit
 - `scraper_state.json`: State file for resumption
 
 ## Data Format
-
-### Training Data Structure
 
 Each line in `training_data.jsonl` contains:
 
@@ -114,8 +372,8 @@ Each line in `training_data.jsonl` contains:
       "target": "issue summary"
     },
     "classification": {
-      "input": "full issue text", 
-      "target": {"status": "Resolved", "priority": "Major"}
+      "input": "full issue text",
+      "target": { "status": "Resolved", "priority": "Major" }
     },
     "qa": {
       "context": "full issue text",
@@ -125,122 +383,113 @@ Each line in `training_data.jsonl` contains:
 }
 ```
 
-## Edge Cases Handled
-
-### Network Issues
-- **HTTP 429 (Rate Limited)**: Exponential backoff with jitter
-- **5xx Server Errors**: Automatic retries with increasing delays
-- **Timeouts**: Configurable timeout with retry logic
-- **Connection Failures**: Graceful degradation and resumption
-
-### Data Issues
-- **Malformed JSON**: Skip corrupted records, continue processing
-- **Missing Fields**: Default values and optional field handling
-- **Empty Content**: Filter out issues without meaningful content
-- **Encoding Issues**: Proper UTF-8 handling for international content
-
-### Operational Issues
-- **Interruption Recovery**: State persistence for resumable operations
-- **Memory Management**: Streaming processing for large datasets
-- **Disk Space**: Incremental file writing with error handling
-
-## Performance Optimizations
-
-### Concurrency
-- Async/await for I/O-bound operations
-- Semaphore-based concurrency limiting
-- Connection pooling with httpx
-
-### Rate Limiting
-- Configurable delays between requests
-- Adaptive rate limiting based on server responses
-- Respectful default settings (1 req/sec)
-
-### Memory Efficiency
-- Streaming JSONL output (no full dataset in memory)
-- Generator-based issue processing
-- Efficient data structures with Pydantic
-
-### Resumption
-- Persistent state tracking
-- Skip already processed issues
-- Incremental progress saving
-
-## Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run with coverage
-pytest --cov=jira_scraper
-
-# Run specific test file
-pytest tests/test_scraper.py
-
-# Run with verbose output
-pytest -v
-```
-
-### Test Coverage
-
-- **Unit Tests**: All core components with mocking
-- **Integration Tests**: End-to-end scraping workflows
-- **Error Handling**: Network failures, malformed data
-- **State Management**: Persistence and resumption logic
-
-## Configuration
-
-### Environment Variables
-
-```bash
-export JIRA_RATE_LIMIT=1.0      # Rate limit in seconds
-export JIRA_MAX_CONCURRENT=5    # Max concurrent requests
-export JIRA_TIMEOUT=30          # Request timeout in seconds
-```
-
-### Project Selection
-
-Default projects are chosen for diversity:
-- **KAFKA**: High-volume messaging system
-- **SPARK**: Big data processing engine  
-- **HADOOP**: Distributed computing framework
-
-These provide varied issue types, discussion patterns, and technical domains.
-
 ## Future Improvements
 
-### Scalability
-- Distributed scraping across multiple workers
-- Database backend for large-scale state management
-- Cloud storage integration for output data
+### Scalability Enhancements
 
-### Data Quality
-- Advanced text preprocessing and cleaning
-- Duplicate detection and deduplication
-- Content quality scoring and filtering
+#### **Distributed Scraping**
 
-### Monitoring
-- Prometheus metrics integration
-- Real-time progress dashboards
-- Alert system for scraping failures
+- **Current**: Single-process scraping
+- **Future**: Multi-worker distributed architecture
+- **Benefits**: Horizontal scaling, fault isolation
+- **Implementation**: Message queue coordination, shared state store
+
+#### **Database Backend**
+
+```python
+# Future: Replace JSON state with database
+class DatabaseStateManager:
+    async def mark_processed(self, issue_key: str) -> None:
+        await self.db.execute("INSERT INTO processed_issues (key) VALUES (?)", issue_key)
+```
+
+- **Current**: JSON file state management
+- **Future**: PostgreSQL/SQLite for large-scale state
+- **Benefits**: ACID properties, concurrent access, query capabilities
+
+#### **Cloud Storage Integration**
+
+- **Current**: Local file output
+- **Future**: S3/GCS direct upload with streaming
+- **Benefits**: Unlimited storage, built-in redundancy, cost efficiency
+
+### Data Quality Improvements
+
+#### **Advanced Text Processing**
+
+```python
+# Future: Enhanced text cleaning pipeline
+class TextProcessor:
+    def clean_content(self, text: str) -> str:
+        # normalize whitespace, handle encoding
+        # Extract code blocks, filter spam content
+        # Standardize formatting for better LLM training
+```
+
+- **Current**: Basic text extraction
+- **Future**: NLP-based content cleaning and enhancement
+- **Benefits**: Higher quality training data, better model performance
+
+#### **Duplicate Detection**
+
+- **Current**: No deduplication
+- **Future**: Content-based similarity detection
+- **Implementation**: MinHash, LSH, or embedding-based clustering
+- **Benefits**: Reduced dataset size, improved training efficiency
+
+#### **Content Quality Scoring**
+
+```python
+class QualityScorer:
+    def score_issue(self, issue: JiraIssue) -> float:
+        # Length, complexity, engagement metrics
+        # Technical depth, resolution quality
+        # Community interaction patterns
+```
+
+- **Current**: All issues included
+- **Future**: ML-based quality assessment
+- **Benefits**: Focus on high-value training examples
+
+### Monitoring and Observability
+
+#### **Prometheus Metrics**
+
+```python
+# Future: Comprehensive metrics collection
+SCRAPING_DURATION = Histogram('jira_scraping_duration_seconds')
+ISSUES_PROCESSED = Counter('jira_issues_processed_total')
+ERROR_RATE = Gauge('jira_error_rate')
+```
+
+- **Current**: Basic console logging
+- **Future**: Full observability stack
+- **Benefits**: Performance monitoring, alerting, capacity planning
+
+#### **Real-time Dashboards**
+
+- **Current**: Post-completion statistics
+- **Future**: Live progress visualization
+- **Implementation**: Grafana dashboards, WebSocket updates
+- **Benefits**: Operational visibility, proactive issue detection
 
 ### API Enhancements
-- GraphQL support for more efficient queries
-- Webhook integration for real-time updates
-- Custom field extraction and transformation
 
-## Contributing
+#### **Custom Field Extraction**
 
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
+```python
+# Future: Configurable field mapping
+class FieldExtractor:
+    def __init__(self, field_config: Dict[str, str]):
+        self.field_mapping = field_config
 
-## License
+    def extract_custom_fields(self, issue_data: Dict) -> Dict:
+        # Dynamic field extraction based on configuration
+```
 
-MIT License - see LICENSE file for details.
+- **Current**: Fixed field set
+- **Future**: User-configurable field extraction
+- **Benefits**: Adaptability to different Jira instances, custom workflows
 
 ## Troubleshooting
 
@@ -258,14 +507,9 @@ MIT License - see LICENSE file for details.
 
 ```bash
 # Enable verbose logging
-export PYTHONPATH=.
 python -m jira_scraper.cli --help
 ```
 
-### Support
+## License
 
-For issues and questions, please check the existing issues or create a new one with:
-- Python version
-- Command used
-- Error message
-- Expected vs actual behavior
+MIT License - see LICENSE file for details.

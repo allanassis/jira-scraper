@@ -7,9 +7,6 @@ help:  ## Show this help message
 install: ## Install the package and dependencies
 	python -m venv jira_scraper_env && source jira_scraper_env/bin/activate && pip install -e .
 
-install-dev:  ## Install development dependencies
-	python -m ensurepip && pip install -e ".[dev]"
-
 unit-test:  ## Run tests
 	pytest tests/ -v --ignore=tests/test_e2e_cli.py
 
@@ -17,7 +14,7 @@ e2e-test:  ## Run tests
 	pytest tests/test_e2e_cli.py -v
 
 test-cov:  ## Run tests with coverage
-	pytest tests/ --cov=jira_scraper --cov-report=html
+	pytest tests/ --cov=jira_scraper --cov-report=html --ignore=tests/test_e2e_cli.py
 
 lint:  ## Run linting
 	black --check jira_scraper tests
