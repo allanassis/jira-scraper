@@ -10,8 +10,11 @@ install: ## Install the package and dependencies
 install-dev:  ## Install development dependencies
 	python -m ensurepip && pip install -e ".[dev]"
 
-test:  ## Run tests
-	pytest tests/ -v
+unit-test:  ## Run tests
+	pytest tests/ -v --ignore=tests/test_e2e_cli.py
+
+e2e-test:  ## Run tests
+	pytest tests/test_e2e_cli.py -v
 
 test-cov:  ## Run tests with coverage
 	pytest tests/ --cov=jira_scraper --cov-report=html
