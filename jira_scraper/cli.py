@@ -21,7 +21,7 @@ console = Console()
     "-p",
     required=True,
     multiple=True,
-    default=[],# ["KAFKA", "SPARK", "HADOOP"],
+    default=[],  # ["KAFKA", "SPARK", "HADOOP"],
     help="Jira projects to scrape",
 )
 @click.option(

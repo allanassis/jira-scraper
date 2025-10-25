@@ -86,7 +86,10 @@ class JiraScraper:
         issue_keys = []
         async for issue_key in self.get_project_issues(project):
             issue_keys.append(issue_key)
-            if self.max_issues_per_project and len(issue_keys) >= self.max_issues_per_project:
+            if (
+                self.max_issues_per_project
+                and len(issue_keys) >= self.max_issues_per_project
+            ):
                 break
 
         print(f"Found {len(issue_keys)} issues in {project}")

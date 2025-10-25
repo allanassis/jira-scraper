@@ -58,9 +58,9 @@ def test_llm_training_record():
             )
         ],
     )
-    
+
     record = LLMTrainingRecord.from_jira_issue(issue)
-    
+
     assert record.issue_key == "TEST-123"
     assert record.project == "TEST"
     assert "Test description" in record.text_content
@@ -84,7 +84,10 @@ def test_jira_issue_validation_missing_key():
             created=datetime.now(),
             updated=datetime.now(),
         )
-    assert "1 validation error for JiraIssue\nkey\n  Input should be a valid string" in str(exc_info.value)
+    assert (
+        "1 validation error for JiraIssue\nkey\n  Input should be a valid string"
+        in str(exc_info.value)
+    )
 
 
 def test_jira_issue_validation_missing_project():
@@ -100,7 +103,10 @@ def test_jira_issue_validation_missing_project():
             created=datetime.now(),
             updated=datetime.now(),
         )
-    assert "1 validation error for JiraIssue\nproject\n  Input should be a valid string" in str(exc_info.value)
+    assert (
+        "1 validation error for JiraIssue\nproject\n  Input should be a valid string"
+        in str(exc_info.value)
+    )
 
 
 def test_jira_issue_validation_missing_status():
@@ -116,7 +122,10 @@ def test_jira_issue_validation_missing_status():
             created=datetime.now(),
             updated=datetime.now(),
         )
-    assert "1 validation error for JiraIssue\nstatus\n  Input should be a valid string" in str(exc_info.value)
+    assert (
+        "1 validation error for JiraIssue\nstatus\n  Input should be a valid string"
+        in str(exc_info.value)
+    )
 
 
 def test_jira_issue_validation_missing_reporter():
@@ -132,7 +141,10 @@ def test_jira_issue_validation_missing_reporter():
             created=datetime.now(),
             updated=datetime.now(),
         )
-    assert "1 validation error for JiraIssue\nreporter\n  Input should be a valid string" in str(exc_info.value)
+    assert (
+        "1 validation error for JiraIssue\nreporter\n  Input should be a valid string"
+        in str(exc_info.value)
+    )
 
 
 def test_jira_issue_from_api_response_invalid_data():
@@ -148,7 +160,7 @@ def test_jira_issue_from_api_response_invalid_data():
             "updated": "2023-01-02T00:00:00.000Z",
         },
     }
-    
+
     with pytest.raises(ValidationError):
         JiraIssue.from_api_response(invalid_data)
 
