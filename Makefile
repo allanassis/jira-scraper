@@ -14,7 +14,7 @@ e2e-test:  ## Run tests
 	pytest tests/test_e2e_cli.py -v
 
 test-cov:  ## Run tests with coverage
-	pytest tests/ --cov=jira_scraper --cov-report=html --ignore=tests/test_e2e_cli.py
+	pytest tests/ --cov=jira_scraper --cov-report=html --cov-report=xml --ignore=tests/test_e2e_cli.py
 
 lint:  ## Run linting
 	black --check jira_scraper tests
