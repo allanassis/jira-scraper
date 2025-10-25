@@ -2,9 +2,9 @@
 
 import json
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
-import aiofiles
+import aiofiles  # type: ignore
 
 from .models import JiraIssue, LLMTrainingRecord
 
@@ -42,22 +42,24 @@ class DataTransformer:
 
         print(f"Saved raw data to {output_file}")
 
-    def generate_stats(self, issues: List[JiraIssue]) -> dict:
+    def generate_stats(self, issues: List[JiraIssue]) -> Dict[str, Any]:
         """Generate statistics about the scraped data."""
         if not issues:
             return {}
 
-        projects = {}
-        statuses = {}
-        priorities = {}
+        projects: Dict[str, int] = {}
+        statuses: Dict[str, int] = {}
+        priorities: Dict[str, int] = {}
         total_comments = 0
 
         for issue in issues:
             # Project stats
-            projects[issue.project] = projects.get(issue.project, 0) + 1
+            if issue.project:
+                projects[issue.project] = projects.get(issue.project, 0) + 1
 
             # Status stats
-            statuses[issue.status] = statuses.get(issue.status, 0) + 1
+            if issue.status:
+                statuses[issue.status] = statuses.get(issue.status, 0) + 1
 
             # Priority stats
             if issue.priority:

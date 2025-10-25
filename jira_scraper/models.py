@@ -39,9 +39,9 @@ class JiraComment(BaseModel):
                 pass
 
         return cls(
-            id=data.get("id"),
-            author=author.get("displayName"),
-            body=data.get("body"),
+            id=data.get("id") or "",
+            author=author.get("displayName") or "",
+            body=data.get("body") or "",
             created=created or datetime.now(),
             updated=updated,
         )
@@ -69,28 +69,28 @@ class JiraIssue(BaseModel):
 
     @field_validator("key")
     @classmethod
-    def validate_key(cls, v):
+    def validate_key(cls, v: str) -> str:
         if not v:
             raise ValueError("Key is required")
         return v
 
     @field_validator("project")
     @classmethod
-    def validate_project(cls, v):
+    def validate_project(cls, v: str) -> str:
         if not v:
             raise ValueError("Project is required")
         return v
 
     @field_validator("status")
     @classmethod
-    def validate_status(cls, v):
+    def validate_status(cls, v: str) -> str:
         if not v:
             raise ValueError("Status is required")
         return v
 
     @field_validator("reporter")
     @classmethod
-    def validate_reporter(cls, v):
+    def validate_reporter(cls, v: str) -> str:
         if not v:
             raise ValueError("Reporter is required")
         return v
@@ -151,17 +151,17 @@ class JiraIssue(BaseModel):
         assignee = fields.get("assignee") or {}
 
         return cls(
-            key=data.get("key"),
-            id=data.get("id"),
-            project=project.get("key"),
-            summary=fields.get("summary"),
+            key=data.get("key") or "",
+            id=data.get("id") or "",
+            project=project.get("key") or "",
+            summary=fields.get("summary") or "",
             description=fields.get("description"),
-            status=status.get("name"),
+            status=status.get("name") or "",
             priority=priority.get("name"),
             assignee=assignee.get("displayName"),
-            reporter=reporter.get("displayName"),
-            created=created,
-            updated=updated,
+            reporter=reporter.get("displayName") or "",
+            created=created or datetime.now(),
+            updated=updated or datetime.now(),
             resolved=resolved,
             labels=fields.get("labels") or [],
             components=[

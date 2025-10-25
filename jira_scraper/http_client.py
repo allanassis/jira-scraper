@@ -33,7 +33,11 @@ class JiraHttpClient:
         retry=retry_if_exception_type((httpx.HTTPError, httpx.TimeoutException)),
     )
     async def request(
-        self, method: str, endpoint: str, params: Optional[Dict] = None, **kwargs
+        self,
+        method: str,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
     ) -> Dict[str, Any]:
         """Make HTTP request with retry logic and rate limiting."""
         await asyncio.sleep(self.rate_limit_delay)
@@ -46,9 +50,11 @@ class JiraHttpClient:
             raise httpx.HTTPError("Rate limited")
 
         response.raise_for_status()
-        return response.json()
+        return response.json()  # type: ignore
 
-    async def get(self, endpoint: str, params: Optional[Dict] = None) -> Dict[str, Any]:
+    async def get(
+        self, endpoint: str, params: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """GET request."""
         return await self.request("GET", endpoint, params=params)
 
