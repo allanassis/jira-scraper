@@ -13,11 +13,14 @@ A robust, fault-tolerant web scraper that extracts issue data from Apache's publ
 
 ```bash
 # Clone the repository
-git clone <repository-url> scraping-tutor
-cd scraping-tutor
+$ git clone <repository-url> scraping-tutor
+$ cd scraping-tutor
 
 # Create virtual environment and install dependencies
-make install
+$ make install
+
+# Switch to the created env on your terminal
+$ source jira_scraper_env/bin/activate
 ```
 
 ## Usage
