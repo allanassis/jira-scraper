@@ -13,7 +13,7 @@ A robust, fault-tolerant web scraper that extracts issue data from Apache's publ
 
 ```bash
 # Clone the repository
-git clone <repository-url>
+git clone <repository-url> scraping-tutor
 cd scraping-tutor
 
 # Create virtual environment and install dependencies
