@@ -71,7 +71,8 @@ async def demo():
     except KeyboardInterrupt:
         print("\n⏹️  Demo interrupted")
     except Exception as e:
-        print(f"❌ Error: {e}")
+        e.with_traceback()
+        print(f"❌ Error: {str(e)}")
     finally:
         await scraper.close()
 
