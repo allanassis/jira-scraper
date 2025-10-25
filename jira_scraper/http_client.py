@@ -1,8 +1,5 @@
-"""HTTP client with error handling, throttling, and pagination."""
-
 import asyncio
 from typing import Any, Dict, Optional, AsyncGenerator
-from urllib.parse import urljoin
 
 import httpx
 from tenacity import (
@@ -11,7 +8,6 @@ from tenacity import (
     wait_exponential,
     retry_if_exception_type,
 )
-
 
 class JiraHttpClient:
     """HTTP client for Jira API v2 with built-in error handling and rate limiting."""
@@ -45,7 +41,6 @@ class JiraHttpClient:
         """Make HTTP request with retry logic and rate limiting."""
         await asyncio.sleep(self.rate_limit_delay)
         
-        # url = urljoin(self.base_url, endpoint)
         url = f"{self.base_url}{endpoint}"
         response = await self.client.request(method, url, params=params, **kwargs)
         
@@ -96,6 +91,6 @@ class JiraHttpClient:
         }
         return await self.get(f"/rest/api/2/issue/{issue_key}", params)
 
-    async def cloqse(self) -> None:
+    async def close(self) -> None:
         """Close HTTP client."""
         await self.client.aclose()

@@ -50,8 +50,8 @@ async def test_state_management(scraper):
     assert "TEST-123" in new_scraper.processed_issues
 
 
-def test_parse_issue(scraper):
-    """Test issue parsing from API response."""
+def test_issue_from_api_response():
+    """Test issue creation from API response."""
     api_response = {
         "key": "TEST-123",
         "id": "123",
@@ -81,7 +81,8 @@ def test_parse_issue(scraper):
         },
     }
     
-    issue = scraper._parse_issue(api_response)
+    from jira_scraper.models import JiraIssue
+    issue = JiraIssue.from_api_response(api_response)
     
     assert issue.key == "TEST-123"
     assert issue.summary == "Test issue"
