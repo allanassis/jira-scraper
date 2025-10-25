@@ -17,11 +17,13 @@ class JiraScraper:
         output_dir: Path,
         max_concurrent: int = 5,
         rate_limit_delay: float = 1.0,
+        max_issues_per_project: Optional[int] = None,
     ):
         self.projects = projects
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.max_concurrent = max_concurrent
+        self.max_issues_per_project = max_issues_per_project
 
         # State management
         self.state_file = self.output_dir / "scraper_state.json"
@@ -84,6 +86,8 @@ class JiraScraper:
         issue_keys = []
         async for issue_key in self.get_project_issues(project):
             issue_keys.append(issue_key)
+            if self.max_issues_per_project and len(issue_keys) >= self.max_issues_per_project:
+                break
 
         print(f"Found {len(issue_keys)} issues in {project}")
 

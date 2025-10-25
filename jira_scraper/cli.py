@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 import click
+from click.testing import CliRunner
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
@@ -18,9 +19,10 @@ console = Console()
 @click.option(
     "--projects",
     "-p",
+    required=True,
     multiple=True,
-    default=["KAFKA", "SPARK", "HADOOP"],
-    help="Jira projects to scrape (default: KAFKA, SPARK, HADOOP)",
+    default=[],# ["KAFKA", "SPARK", "HADOOP"],
+    help="Jira projects to scrape",
 )
 @click.option(
     "--output-dir",
@@ -48,14 +50,24 @@ console = Console()
     is_flag=True,
     help="Resume from previous scraping session",
 )
+@click.option(
+    "--limit",
+    "-l",
+    type=int,
+    help="Limit number of issues per project (for testing)",
+)
 def main(
     projects: tuple,
     output_dir: Path,
     max_concurrent: int,
     rate_limit: float,
     resume: bool,
+    limit: int,
 ) -> None:
-    """Scrape Apache Jira issues for LLM training data."""
+    """Scrape Apache Jira issues for LLM training data.
+    \n
+       Ex:  python -m jira_scraper.cli -p KAFKA -p SPARK -o output-data -l 10
+    """
     console.print("[bold blue]Jira Scraper for LLM Training Data[/bold blue]")
     console.print(f"Projects: {', '.join(projects)}")
     console.print(f"Output directory: {output_dir}")
@@ -68,7 +80,7 @@ def main(
         if state_file.exists():
             state_file.unlink()
 
-    asyncio.run(scrape_data(projects, output_dir, max_concurrent, rate_limit))
+    asyncio.run(scrape_data(projects, output_dir, max_concurrent, rate_limit, limit))
 
 
 async def scrape_data(
@@ -76,6 +88,7 @@ async def scrape_data(
     output_dir: Path,
     max_concurrent: int,
     rate_limit: float,
+    limit: int,
 ) -> None:
     """Main scraping logic."""
     scraper = JiraScraper(
@@ -83,6 +96,7 @@ async def scrape_data(
         output_dir=output_dir,
         max_concurrent=max_concurrent,
         rate_limit_delay=rate_limit,
+        max_issues_per_project=limit,
     )
 
     transformer = DataTransformer(output_dir)

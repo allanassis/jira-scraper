@@ -22,10 +22,6 @@ class DataTransformer:
 
         async with aiofiles.open(output_file, "w") as f:
             for issue in issues:
-                # Skip issues without meaningful content
-                if not issue.description and not issue.comments:
-                    continue
-
                 try:
                     record = LLMTrainingRecord.from_jira_issue(issue)
                     line = json.dumps(record.model_dump(), ensure_ascii=False)
